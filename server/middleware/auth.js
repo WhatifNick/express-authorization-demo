@@ -2,6 +2,8 @@ const passport = require('passport')
 const PassportJwt = require('passport-jwt')
 const JWT = require('jsonwebtoken')
 const User = require('../models/user')
+const Product = require('../models/product')
+
 
 const jwtSecret = 'doggo123' // Should come from ENV
 const jwtAlgorithm = 'HS256'
@@ -28,7 +30,7 @@ passport.use(new PassportJwt.Strategy({
 }))
 
 const register = (req, res, next) => {
-  User.register(new User({ email: req.body.email }), req.body.password, (err, user) => {
+  User.register(new User({ email: req.body.email, role: 'user' }), req.body.password, (err, user) => {
     if (err) {
       return res.status(500).send(err.message);
     }
@@ -36,6 +38,14 @@ const register = (req, res, next) => {
     req.user = user
     next()
   })
+}
+
+const isAdmin = (req, res, next) => {
+  if (req.user.role && req.user.role === 'admin') {
+    next()
+  } else {
+    return res.sendStatus(403)
+  }
 }
 
 // Create a JWT (user just logged in or registered)
@@ -59,10 +69,23 @@ const signJwtForUser = (req, res) => {
     res.json({token: token})
 }
 
+const createProduct = (req, res, next) => {
+  req.product = new Product({ title: req.body.title, description: req.body.description, price: req.body.price  })
+  req.product.save().then(() => {
+    next()
+  })
+}
+
+const showProduct = (req, res, next) => {
+  
+}
+
 module.exports = {
   initializePassport: passport.initialize(),
   requireJwt: passport.authenticate('jwt', { session: false }),
   login: passport.authenticate('local', { session: false }),
   register,
-  signJwtForUser
+  signJwtForUser,
+  isAdmin,
+  createProduct
 }
